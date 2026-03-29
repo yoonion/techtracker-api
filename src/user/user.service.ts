@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -22,5 +23,20 @@ export class UserService {
     }
 
     return user;
+  }
+
+  updateUser(id: number, updateData: UpdateUserDto) {
+    const user = this.users[id];
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    this.users[id] = {
+      ...user,
+      ...updateData
+    };
+
+    return this.users[id];
   }
 }
