@@ -91,15 +91,29 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
 
   private async collectSource(source: BlogSource) {
     try {
-      const discoveredFeedUrl = await this.discoverFeedUrl(source.url);
-      const discoveredIconUrl = await this.discoverIconUrl(source.url);
+      const storedFeedUrl = source.rssUrl?.trim() || null;
+      let discoveredFeedUrl: string | null = storedFeedUrl;
+      let feedXml: string | null = null;
+
+      if (storedFeedUrl) {
+        feedXml = await this.fetchFeedXml(storedFeedUrl);
+        if (!feedXml) {
+          discoveredFeedUrl = null;
+        }
+      }
+
+      if (!discoveredFeedUrl) {
+        discoveredFeedUrl = await this.discoverFeedUrl(source.url);
+      }
 
       if (discoveredFeedUrl) {
         this.logger.log(
           `Feed found for source ${source.id}: ${discoveredFeedUrl}`,
         );
 
-        const feedXml = await this.fetchFeedXml(discoveredFeedUrl);
+        if (!feedXml) {
+          feedXml = await this.fetchFeedXml(discoveredFeedUrl);
+        }
         if (feedXml) {
           const items = this.parseFeedItems(feedXml, discoveredFeedUrl);
           if (items.length > 0) {
@@ -116,6 +130,12 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
       } else {
         this.logger.warn(`No feed found for source ${source.id}: ${source.url}`);
       }
+
+      const discoveredIconUrl = await this.discoverIconUrl(
+        source.url,
+        discoveredFeedUrl,
+        feedXml,
+      );
 
       await this.blogSourceService.updateCollectionMetadata(
         source.id,
@@ -236,7 +256,7 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
       }
 
       try {
-        links.push(new URL(hrefMatch[1], baseUrl).toString());
+        links.push(new URL(this.cleanText(hrefMatch[1]), baseUrl).toString());
       } catch {
         continue;
       }
@@ -245,7 +265,29 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
     return links;
   }
 
-  private async discoverIconUrl(sourceUrl: string): Promise<string | null> {
+  private async discoverIconUrl(
+    sourceUrl: string,
+    feedUrl: string | null,
+    feedXml: string | null,
+  ): Promise<string | null> {
+    const sourceHost = this.safeGetHost(sourceUrl);
+    const isMediumSource = sourceHost === 'medium.com';
+    const feedImageUrls =
+      feedXml && feedUrl
+        ? this.extractFeedImageUrls(feedXml, feedUrl)
+        : feedXml
+          ? this.extractFeedImageUrls(feedXml, sourceUrl)
+          : [];
+
+    // Medium 계열은 도메인 favicon이 공용이라, feed 채널 이미지를 우선 시도.
+    if (isMediumSource) {
+      for (const imageUrl of feedImageUrls) {
+        if (await this.isReachableUrl(imageUrl)) {
+          return imageUrl;
+        }
+      }
+    }
+
     try {
       const response = await this.fetchWithRetry(sourceUrl, 8000);
 
@@ -265,6 +307,24 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
       // ignore and fallback
     }
 
+    // 일반 사이트는 favicon/rel icon 우선. 그래도 없을 때 feed 채널 이미지 fallback.
+    if (!isMediumSource) {
+      try {
+        const faviconUrl = new URL('/favicon.ico', sourceUrl).toString();
+        if (await this.isReachableUrl(faviconUrl)) {
+          return faviconUrl;
+        }
+      } catch {
+        // ignore
+      }
+
+      for (const imageUrl of feedImageUrls) {
+        if (await this.isReachableUrl(imageUrl)) {
+          return imageUrl;
+        }
+      }
+    }
+
     try {
       const fallback = new URL('/favicon.ico', sourceUrl).toString();
       if (await this.isReachableUrl(fallback)) {
@@ -275,6 +335,36 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
     }
 
     return null;
+  }
+
+  private extractFeedImageUrls(feedXml: string, baseUrl: string): string[] {
+    const links = new Set<string>();
+
+    const rssImageUrlMatch = feedXml.match(
+      /<image\b[\s\S]*?<url[^>]*>([\s\S]*?)<\/url>[\s\S]*?<\/image>/i,
+    );
+    if (rssImageUrlMatch?.[1]) {
+      links.add(this.toAbsoluteUrl(this.cleanText(rssImageUrlMatch[1]), baseUrl));
+    }
+
+    const itunesImageRegex = /<itunes:image\b[^>]*href=["']([^"']+)["'][^>]*>/gi;
+    let itunesMatch: RegExpExecArray | null = itunesImageRegex.exec(feedXml);
+    while (itunesMatch?.[1]) {
+      links.add(this.toAbsoluteUrl(this.cleanText(itunesMatch[1]), baseUrl));
+      itunesMatch = itunesImageRegex.exec(feedXml);
+    }
+
+    const atomIcon = this.readTag(feedXml, 'icon');
+    if (atomIcon) {
+      links.add(this.toAbsoluteUrl(atomIcon, baseUrl));
+    }
+
+    const atomLogo = this.readTag(feedXml, 'logo');
+    if (atomLogo) {
+      links.add(this.toAbsoluteUrl(atomLogo, baseUrl));
+    }
+
+    return [...links].filter(Boolean);
   }
 
   private extractIconLinksFromHtml(html: string, baseUrl: string): string[] {
@@ -301,7 +391,7 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
       }
 
       try {
-        links.push(new URL(hrefMatch[1], baseUrl).toString());
+        links.push(new URL(this.cleanText(hrefMatch[1]), baseUrl).toString());
       } catch {
         continue;
       }
@@ -478,6 +568,14 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
       return new URL(url, baseUrl).toString();
     } catch {
       return url;
+    }
+  }
+
+  private safeGetHost(url: string): string | null {
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return null;
     }
   }
 
