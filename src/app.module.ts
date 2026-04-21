@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BlogSourceModule } from './blog-source/blog-source.module';
 import { CollectorModule } from './collector/collector.module';
 import { BlogPostModule } from './blog-post/blog-post.module';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { BlogPostModule } from './blog-post/blog-post.module';
         database: configService.get<string>('DB_NAME', 'nestdb'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('DB_SYNC', 'false') === 'true',
+        namingStrategy: new SnakeNamingStrategy(),
       }),
     }),
     UserModule,
