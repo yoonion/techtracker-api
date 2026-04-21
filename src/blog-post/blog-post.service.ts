@@ -60,4 +60,30 @@ export class BlogPostService {
       await this.blogPostRepository.save(created);
     }
   }
+
+  async getPublicFeed(limit = 50) {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+
+    const posts = await this.blogPostRepository.find({
+      relations: ['source'],
+      order: {
+        publishedAt: 'DESC',
+        collectedAt: 'DESC',
+      },
+      take: safeLimit,
+    });
+
+    return posts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      summary: post.summary,
+      url: post.url,
+      publishedAt: post.publishedAt,
+      collectedAt: post.collectedAt,
+      source: {
+        id: post.source.id,
+        url: post.source.url,
+      },
+    }));
+  }
 }
