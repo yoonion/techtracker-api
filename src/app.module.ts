@@ -9,6 +9,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BlogSourceModule } from './blog-source/blog-source.module';
 import { CollectorModule } from './collector/collector.module';
 import { BlogPostModule } from './blog-post/blog-post.module';
+import { BlogSubscriptionModule } from './blog-subscription/blog-subscription.module';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 @Module({
@@ -35,6 +36,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
     AuthModule,
     BlogSourceModule,
     BlogPostModule,
+    BlogSubscriptionModule,
     CollectorModule,
   ],
   controllers: [AppController],
