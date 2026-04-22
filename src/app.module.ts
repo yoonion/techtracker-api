@@ -26,6 +26,7 @@ import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
         username: configService.get<string>('DB_USERNAME', 'root'),
         password: configService.get<string>('DB_PASSWORD', ''),
         database: configService.get<string>('DB_NAME', 'nestdb'),
+        timezone: configService.get<string>('DB_TIMEZONE', 'Z'),
         autoLoadEntities: true,
         synchronize: configService.get<string>('DB_SYNC', 'false') === 'true',
         namingStrategy: new SnakeNamingStrategy(),
