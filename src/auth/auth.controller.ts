@@ -34,6 +34,12 @@ export class AuthController {
     return this.authService.refresh(refreshToken);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthUser) {
+    return this.authService.me(user.userId);
+  }
+
   @Get('discord/connect')
   @UseGuards(JwtAuthGuard)
   getDiscordConnectUrl(@CurrentUser() user: AuthUser) {

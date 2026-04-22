@@ -94,6 +94,18 @@ export class AuthService {
     };
   }
 
+  async me(userId: number) {
+    const user = await this.userService.getUser(userId);
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      discordUsername: user.discordUsername,
+      discordConnectedAt: user.discordConnectedAt,
+    };
+  }
+
   getDiscordConnectUrl(userId: number) {
     const clientId = this.configService.get<string>('DISCORD_CLIENT_ID');
     const redirectUri = this.configService.get<string>('DISCORD_REDIRECT_URI');
