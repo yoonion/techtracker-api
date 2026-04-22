@@ -145,4 +145,18 @@ export class UserService {
       discordConnectedAt: user.discordConnectedAt,
     };
   }
+
+  async unlinkDiscordAccount(userId: number) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.discordUserId = null;
+    user.discordUsername = null;
+    user.discordConnectedAt = null;
+
+    await this.userRepository.save(user);
+    return { disconnected: true };
+  }
 }

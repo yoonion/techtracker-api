@@ -52,6 +52,12 @@ export class AuthController {
     return this.authService.getDiscordStatus(user.userId);
   }
 
+  @Post('discord/disconnect')
+  @UseGuards(JwtAuthGuard)
+  disconnectDiscord(@CurrentUser() user: AuthUser) {
+    return this.authService.disconnectDiscord(user.userId);
+  }
+
   @Post('discord/test-dm')
   @UseGuards(JwtAuthGuard)
   sendDiscordTestDm(@CurrentUser() user: AuthUser) {

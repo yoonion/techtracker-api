@@ -218,6 +218,10 @@ export class AuthService {
     return this.userService.getDiscordConnection(userId);
   }
 
+  disconnectDiscord(userId: number) {
+    return this.userService.unlinkDiscordAccount(userId);
+  }
+
   async sendDiscordTestDm(userId: number) {
     const botToken = this.configService.get<string>('DISCORD_BOT_TOKEN');
     if (!botToken) {
