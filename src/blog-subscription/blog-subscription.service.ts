@@ -68,5 +68,29 @@ export class BlogSubscriptionService {
 
     return { subscribed: false, sourceId };
   }
-}
 
+  async getDiscordSubscribersBySourceId(sourceId: number) {
+    const rows = await this.blogSubscriptionRepository
+      .createQueryBuilder('subscription')
+      .innerJoin('subscription.source', 'source')
+      .innerJoin('subscription.user', 'user')
+      .select('user.id', 'userId')
+      .addSelect('user.discordUserId', 'discordUserId')
+      .addSelect('user.discordUsername', 'discordUsername')
+      .where('source.id = :sourceId', { sourceId })
+      .andWhere('user.discordUserId IS NOT NULL')
+      .getRawMany<{
+        userId: string;
+        discordUserId: string | null;
+        discordUsername: string | null;
+      }>();
+
+    return rows
+      .filter((row) => typeof row.discordUserId === 'string' && row.discordUserId)
+      .map((row) => ({
+        userId: Number(row.userId),
+        discordUserId: row.discordUserId as string,
+        discordUsername: row.discordUsername,
+      }));
+  }
+}

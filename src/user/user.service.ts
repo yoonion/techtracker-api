@@ -97,4 +97,52 @@ export class UserService {
 
     await this.userRepository.save(user);
   }
+
+  async linkDiscordAccount(
+    userId: number,
+    discordUserId: string,
+    discordUsername: string,
+  ) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const existingLinkedUser = await this.userRepository.findOne({
+      where: { discordUserId },
+      select: { id: true },
+    });
+
+    if (existingLinkedUser && existingLinkedUser.id !== userId) {
+      throw new ConflictException('이미 다른 계정에 연결된 Discord 계정입니다.');
+    }
+
+    user.discordUserId = discordUserId;
+    user.discordUsername = discordUsername;
+    user.discordConnectedAt = new Date();
+
+    await this.userRepository.save(user);
+  }
+
+  async getDiscordConnection(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: {
+        id: true,
+        discordUserId: true,
+        discordUsername: true,
+        discordConnectedAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      connected: Boolean(user.discordUserId),
+      discordUsername: user.discordUsername,
+      discordConnectedAt: user.discordConnectedAt,
+    };
+  }
 }

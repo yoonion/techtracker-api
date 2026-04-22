@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { BlogSourceService } from '../blog-source/blog-source.service';
 import { BlogSource } from '../blog-source/blog-source.entity';
 import { BlogPostService, CollectedFeedItem } from '../blog-post/blog-post.service';
+import { DiscordNotificationService } from './discord-notification.service';
 
 @Injectable()
 export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
@@ -26,6 +27,7 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly blogSourceService: BlogSourceService,
     private readonly blogPostService: BlogPostService,
+    private readonly discordNotificationService: DiscordNotificationService,
   ) {
     this.intervalMs = this.configService.get<number>(
       'COLLECTOR_INTERVAL_MS',
@@ -91,6 +93,7 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
 
   private async collectSource(source: BlogSource) {
     try {
+      const hadPreviousCollection = Boolean(source.lastCollectedAt);
       const storedFeedUrl = source.rssUrl?.trim() || null;
       let discoveredFeedUrl: string | null = storedFeedUrl;
       let feedXml: string | null = null;
@@ -117,10 +120,19 @@ export class FeedCollectorService implements OnModuleInit, OnModuleDestroy {
         if (feedXml) {
           const items = this.parseFeedItems(feedXml, discoveredFeedUrl);
           if (items.length > 0) {
-            await this.blogPostService.upsertManyFromFeed(source, items);
-            this.logger.log(
-              `Saved ${items.length} posts for source ${source.id}`,
+            const newPosts = await this.blogPostService.upsertManyFromFeed(
+              source,
+              items,
             );
+            this.logger.log(
+              `Saved ${items.length} posts for source ${source.id} (new: ${newPosts.length})`,
+            );
+            if (hadPreviousCollection && newPosts.length > 0) {
+              await this.discordNotificationService.notifyNewPosts(
+                source,
+                newPosts,
+              );
+            }
           } else {
             this.logger.warn(
               `No parsable posts found in feed: ${discoveredFeedUrl}`,

@@ -28,4 +28,13 @@ export class User {
 
   @Column({ nullable: true })
   refreshToken: string;
+
+  @Column({ type: 'varchar', length: 64, nullable: true, unique: true })
+  discordUserId: string | null;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  discordUsername: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  discordConnectedAt: Date | null;
 }

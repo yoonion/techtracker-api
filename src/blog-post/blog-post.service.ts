@@ -12,6 +12,13 @@ export type CollectedFeedItem = {
   publishedAt: Date | null;
 };
 
+export type NewCollectedPost = {
+  id: number;
+  title: string;
+  url: string;
+  publishedAt: Date | null;
+};
+
 @Injectable()
 export class BlogPostService {
   constructor(
@@ -19,7 +26,12 @@ export class BlogPostService {
     private readonly blogPostRepository: Repository<BlogPost>,
   ) {}
 
-  async upsertManyFromFeed(source: BlogSource, items: CollectedFeedItem[]) {
+  async upsertManyFromFeed(
+    source: BlogSource,
+    items: CollectedFeedItem[],
+  ): Promise<NewCollectedPost[]> {
+    const newPosts: NewCollectedPost[] = [];
+
     for (const item of items) {
       const externalId = item.externalId.trim();
       const url = item.url.trim();
@@ -57,8 +69,16 @@ export class BlogPostService {
         collectedAt: new Date(),
       });
 
-      await this.blogPostRepository.save(created);
+      const saved = await this.blogPostRepository.save(created);
+      newPosts.push({
+        id: saved.id,
+        title: saved.title,
+        url: saved.url,
+        publishedAt: saved.publishedAt,
+      });
     }
+
+    return newPosts;
   }
 
   async getPublicFeed(page = 1, limit = 20, sourceId?: number) {
