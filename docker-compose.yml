@@ -47,8 +47,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    ports:
-      - "4000:4000"
     healthcheck:
       test:
         [
