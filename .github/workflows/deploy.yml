@@ -55,7 +55,7 @@ jobs:
             cd ~/techtracker-api
             git pull origin main
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-            docker compose --env-file .env.prod pull api
-            docker compose --env-file .env.prod up -d --remove-orphans
+            docker compose --env-file .env.prod --profile proxy pull api
+            docker compose --env-file .env.prod --profile proxy up -d --remove-orphans
             docker image prune -f
           EOF_SSH
