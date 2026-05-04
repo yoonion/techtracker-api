@@ -33,7 +33,7 @@ services:
         max-file: "3"
 
   api:
-    image: ${IMAGE_NAME:-ghcr.io/your-org/techtracker-api}:${IMAGE_TAG:-latest}
+    image: ghcr.io/yoonion/techtracker-api:latest
     container_name: techtracker-api
     restart: unless-stopped
     env_file:

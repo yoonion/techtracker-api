@@ -9,9 +9,6 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/techtracker-api
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -36,8 +33,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/techtracker-api:latest
+            ghcr.io/${{ github.repository_owner }}/techtracker-api:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -58,7 +55,7 @@ jobs:
             cd ~/techtracker-api
             git pull origin main
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose --env-file .env.prod pull api
-            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose --env-file .env.prod up -d --remove-orphans
+            docker compose --env-file .env.prod pull api
+            docker compose --env-file .env.prod up -d --remove-orphans
             docker image prune -f
           EOF_SSH
