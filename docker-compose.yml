@@ -1,10 +1,52 @@
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: techtracker-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_this_root_password}
+      MYSQL_DATABASE: ${DB_NAME:-techtracker}
+      MYSQL_USER: ${DB_USERNAME:-techtracker}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_this_app_password}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   api:
     image: ${IMAGE_NAME:-ghcr.io/your-org/techtracker-api}:${IMAGE_TAG:-latest}
     container_name: techtracker-api
     restart: unless-stopped
     env_file:
       - .env.prod
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USERNAME: ${DB_USERNAME:-techtracker}
+      DB_PASSWORD: ${DB_PASSWORD:-change_this_app_password}
+      DB_NAME: ${DB_NAME:-techtracker}
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "4000:4000"
     healthcheck:
@@ -42,3 +84,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  mysql_data:

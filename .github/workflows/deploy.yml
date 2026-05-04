@@ -57,7 +57,7 @@ jobs:
             set -euo pipefail
             cd ~/techtracker-api
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose pull api
-            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose up -d --remove-orphans api
+            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose --env-file .env.prod pull api
+            IMAGE_NAME="${{ env.IMAGE_NAME }}" IMAGE_TAG="latest" docker compose --env-file .env.prod up -d --remove-orphans
             docker image prune -f
           EOF_SSH
